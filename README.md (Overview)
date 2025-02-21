@@ -1,0 +1,25 @@
+** Project Overview**
+
+This project is a full-stack application developed for the Bajaj Finserv Health Dev Challenge.
+The solution is built using Flutter for the frontend and Firebase Functions (Dart) for the backend, ensuring a scalable, serverless, and efficient architecture.
+The application processes user input in JSON format, categorizes the data into numbers and alphabets, identifies the highest alphabet, and
+provides a real-time response using a REST API. The frontend allows users to interact with the API, apply filters, and view results dynamically.
+
+**✅ Backend (Firebase Functions - Dart)**
+
+REST API with two endpoints:
+GET /bfhl → Returns { "operation_code": 1 }
+POST /bfhl → Processes JSON data and returns categorized response.
+Data Processing:
+Separates numbers and alphabets.
+Identifies the highest alphabet.
+Returns structured JSON response.
+Cloud-based & Serverless: Hosted on Firebase for high availability.
+
+**✅ Frontend (Flutter App)**
+
+JSON Input Field to enter test data.
+API Call Integration to communicate with Firebase Functions.
+Dynamic Multi-Select Filters for response customization.
+Real-Time Data Processing & Display
+Modern UI with Flutter Widgets (FilterChips, TextField, Buttons, etc.)
