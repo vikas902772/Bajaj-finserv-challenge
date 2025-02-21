@@ -1,0 +1,168 @@
+// Complete code: Bajaj Finserv Challenge with Flutter & Firebase
+// Backend - Firebase Functions (Dart)
+
+import 'package:firebase_functions_interop/firebase_functions_interop.dart';
+import 'dart:convert';
+
+final functions = FirebaseFunctions.instance;
+
+void main() {
+  final app = FirebaseAdmin.instance.initializeApp();
+  final functions = FirebaseFunctions.instance;
+  functions.https.onRequest("bfhl", handleRequest);
+}
+
+void handleRequest(ExpressHttpRequest request) async {
+  if (request.method == "GET") {
+    request.response
+      ..statusCode = 200
+      ..write(jsonEncode({"operation_code": 1}));
+  } else if (request.method == "POST") {
+    try {
+      final body = await request.body;
+      final data = jsonDecode(body)["data"];
+
+      final user_id = "your_name_ddmmyyyy";
+      final email = "your_email@example.com";
+      final roll_number = "YOUR_ROLL_NUMBER";
+
+      final numbers = data.where((item) => int.tryParse(item) != null).toList();
+      final alphabets = data.where((item) => int.tryParse(item) == null).toList();
+      final highest_alphabet = alphabets.isNotEmpty ? [alphabets.reduce((a, b) => a.compareTo(b) > 0 ? a : b)] : [];
+
+      request.response
+        ..statusCode = 200
+        ..write(jsonEncode({
+          "is_success": true,
+          "user_id": user_id,
+          "email": email,
+          "roll_number": roll_number,
+          "numbers": numbers,
+          "alphabets": alphabets,
+          "highest_alphabet": highest_alphabet
+        }));
+    } catch (e) {
+      request.response
+        ..statusCode = 400
+        ..write(jsonEncode({"is_success": false, "error": e.toString()}));
+    }
+  } else {
+    request.response
+      ..statusCode = 405
+      ..write("Method Not Allowed");
+  }
+}
+
+// Frontend - Flutter App
+import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:convert';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'YOUR_ROLL_NUMBER',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _inputController = TextEditingController();
+  Map<String, dynamic>? _response;
+  List<String> _selectedFilters = [];
+  final HttpsCallable bfhlFunction = FirebaseFunctions.instance.httpsCallable('bfhl');
+
+  Future<void> _submitData() async {
+    try {
+      final input = jsonDecode(_inputController.text);
+      final result = await bfhlFunction.call({'data': input['data']});
+      setState(() {
+        _response = result.data;
+      });
+    } catch (e) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Error'),
+          content: Text('Invalid JSON input'),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))],
+        ),
+      );
+    }
+  }
+
+  void _toggleFilter(String filter) {
+    setState(() {
+      if (_selectedFilters.contains(filter)) {
+        _selectedFilters.remove(filter);
+      } else {
+        _selectedFilters.add(filter);
+      }
+    });
+  }
+
+  Widget _buildFilteredResponse() {
+    if (_response == null) return SizedBox();
+    final filteredResponse = <String, dynamic>{};
+    if (_selectedFilters.contains('Alphabets')) {
+      filteredResponse['alphabets'] = _response!['alphabets'];
+    }
+    if (_selectedFilters.contains('Numbers')) {
+      filteredResponse['numbers'] = _response!['numbers'];
+    }
+    if (_selectedFilters.contains('Highest Alphabet')) {
+      filteredResponse['highest_alphabet'] = _response!['highest_alphabet'];
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: filteredResponse.entries.map((entry) => Text('${entry.key}: ${entry.value.join(', ')}')).toList(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Bajaj Challenge')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _inputController,
+              decoration: InputDecoration(labelText: 'Enter JSON input', border: OutlineInputBorder()),
+              maxLines: 5,
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(onPressed: _submitData, child: Text('Submit')),
+            SizedBox(height: 16),
+            if (_response != null) ...[
+              Text('Multi Filter'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilterChip(label: Text('Alphabets'), selected: _selectedFilters.contains('Alphabets'), onSelected: (selected) => _toggleFilter('Alphabets')),
+                  FilterChip(label: Text('Numbers'), selected: _selectedFilters.contains('Numbers'), onSelected: (selected) => _toggleFilter('Numbers')),
+                  FilterChip(label: Text('Highest Alphabet'), selected: _selectedFilters.contains('Highest Alphabet'), onSelected: (selected) => _toggleFilter('Highest Alphabet')),
+                ],
+              ),
+              SizedBox(height: 16),
+              _buildFilteredResponse(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
